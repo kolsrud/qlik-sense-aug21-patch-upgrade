@@ -1,0 +1,1 @@
+# qlik-sense-aug21-patch-upgrade
