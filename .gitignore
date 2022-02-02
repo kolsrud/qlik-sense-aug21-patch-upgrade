@@ -2,3 +2,4 @@
 bin
 obj
 *~
+QlikSensePatchUpgrade/Version.cs

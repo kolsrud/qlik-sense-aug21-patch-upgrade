@@ -1,0 +1,13 @@
+#!/bin/bash
+VERSION=`git describe --tags | sed 's|-.*-|-|'`
+VERSION="${VERSION:1}"
+echo "Inferred version: $VERSION"
+
+VERSION_FILE=QlikSensePatchUpgrade/Version.cs
+echo "[assembly: System.Reflection.AssemblyFileVersionAttribute(\"${VERSION}\")]" > $VERSION_FILE
+echo "[assembly: System.Reflection.AssemblyInformationalVersionAttribute(\"${VERSION}\")]" >> $VERSION_FILE
+echo "[assembly: System.Reflection.AssemblyVersionAttribute(\"${VERSION}\")]" >> $VERSION_FILE
+
+echo "Wrote file: ${VERSION_FILE}"
+
+build.bat
