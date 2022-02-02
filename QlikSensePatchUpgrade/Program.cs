@@ -76,7 +76,7 @@ namespace QlikSensePatchUpgrade
             var result = RunReplacements(replacements, fileContents);
             if (result != fileContents)
             {
-                MakeBackup(folder, filePath);
+                MakeBackup(filePath);
                 File.WriteAllText(filePath, result);
                 WriteLine("File updated: " + filePath);
                 WriteLine("Restarting service...");
@@ -88,14 +88,14 @@ namespace QlikSensePatchUpgrade
             }
         }
 
-        private static void MakeBackup(string folder, string filePath)
+        private static void MakeBackup(string filePath)
         {
-            var backupName = GetBackupFileName(folder, filePath);
+            var backupName = GetBackupFileName(filePath);
             File.Copy(filePath, backupName);
             WriteLine("File backup created: " + backupName);
         }
 
-        private static string GetBackupFileName(string folder, string filePath)
+        private static string GetBackupFileName(string filePath)
         {
             var baseBackupFileName = filePath + ".bak";
             if (!File.Exists(baseBackupFileName))
