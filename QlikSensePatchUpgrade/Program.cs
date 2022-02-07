@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.ServiceProcess;
 
 namespace QlikSensePatchUpgrade
@@ -8,9 +9,21 @@ namespace QlikSensePatchUpgrade
     {
         static void Main(string[] args)
         {
-            var programFilesFolder = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-            var printingFolder = Path.Combine(programFilesFolder, @"Qlik\Sense\Printing");
+            var printingFolder = ProcessArguments(args);
 
+            var restartRequired = new[]
+            {
+                Update(printingFolder, "Printing.exe.config"),
+                Update(printingFolder, "Qlik.Sense.Printing.dll.config")
+            }.Any(x => x);
+
+            if (!restartRequired)
+            {
+                Console.WriteLine("No config file changes required.");
+                return;
+            }
+
+            Console.WriteLine("Config file change has been performed. Service restart required.");
             var service = new ServiceController("Qlik Sense Printing Service");
             if (service.CanShutdown)
             {
@@ -20,8 +33,6 @@ namespace QlikSensePatchUpgrade
                 WriteLine("Done");
             }
 
-            Update(printingFolder, "Printing.exe.config");
-            Update(printingFolder, "Qlik.Sense.Printing.dll.config");
             Write("Restarting printing service... ");
             service.Start();
             try
@@ -36,6 +47,54 @@ namespace QlikSensePatchUpgrade
             }
         }
 
+        private static string ProcessArguments(string[] args)
+        {
+            var programFilesFolder = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+            if (args.Any())
+            {
+                if (args.Length > 2)
+                    PrintUsage();
+
+                switch (args[0])
+                {
+                    case "-h":
+                        PrintUsage();
+                        break;
+                    case "-f":
+                        if (args.Length != 2)
+                        {
+                            Console.WriteLine("Error: No folder path provided.");
+                            PrintUsage();
+                        }
+
+                        programFilesFolder = args[1];
+                        break;
+                    default:
+                        Console.WriteLine($"Error: Unknown argument \"{args[0]}\".");
+                        PrintUsage();
+                        break;
+                }
+            }
+
+            var printingFolder = Path.Combine(programFilesFolder, @"Qlik\Sense\Printing");
+            if (!Directory.Exists(printingFolder))
+            {
+                Console.WriteLine($"Error: Printing folder not found at {printingFolder}. Installation folder must be provided as argument.");
+                PrintUsage();
+            }
+
+            return printingFolder;
+        }
+
+        private static void PrintUsage()
+        {
+            var exeName = AppDomain.CurrentDomain.FriendlyName;
+            Console.WriteLine($"Usage: {exeName} [-h] [-f <folder>]");
+            Console.WriteLine("  -h: Print this message and exit.");
+            Console.WriteLine("  -f: Path to folder where Qlik Sense is installed. Default is %ProgramFiles%.");
+            Environment.Exit(0);
+        }
+
         private static void WriteLine(string msg)
         {
             Write(msg + Environment.NewLine);
@@ -46,7 +105,7 @@ namespace QlikSensePatchUpgrade
             Console.Write(msg);
         }
 
-        private static void Update(string folder, string file)
+        private static bool Update(string folder, string file)
         {
             WriteLine("Updating file: " + file);
             var filePath = Path.Combine(folder, file);
@@ -79,12 +138,12 @@ namespace QlikSensePatchUpgrade
                 MakeBackup(filePath);
                 File.WriteAllText(filePath, result);
                 WriteLine("File updated: " + filePath);
-                WriteLine("Restarting service...");
-
+                return true;
             }
             else
             {
                 WriteLine("No file update required: " + filePath);
+                return false;
             }
         }
 
